@@ -1,0 +1,140 @@
+{
+    "name": "mirakurun-reboot",
+    "description": "DVR Tuner Server for Japanese TV.",
+    "version": "5.1.2",
+    "homepage": "https://github.com/m10i1986/mirakurun-reboot",
+    "keywords": [
+        "mirakurun",
+        "chinachu",
+        "rivarun",
+        "arib",
+        "isdb",
+        "dvb",
+        "dvr",
+        "dtv",
+        "tv"
+    ],
+    "author": {
+        "name": "MINETA \"m10i\" Hiroki",
+        "url": "https://github.com/m10i1986"
+    },
+    "contributors": [
+        "rndomhack"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/m10i1986/mirakurun-reboot.git"
+    },
+    "bugs": {
+        "url": "https://github.com/m10i1986/mirakurun-reboot/issues"
+    },
+    "license": "Apache-2.0",
+    "bin": {
+        "mirakurun": "bin/cli.sh",
+        "mirakurun-epgdump": "bin/epgdump.js"
+    },
+    "main": "lib/client.js",
+    "packageManager": "pnpm@11.5.3",
+    "scripts": {
+        "start": "node --max-semi-space-size=64 -r source-map-support/register lib/server.js ",
+        "debug": "node --max-semi-space-size=64 -r source-map-support/register --inspect=0.0.0.0:9229 lib/server.js",
+        "build": "pnpm run build:server && pnpm run typecheck:ui && pnpm run build:webpack",
+        "build:server": "tsc --declaration",
+        "build:webpack": "webpack",
+        "typecheck:ui": "tsc --noEmit -p src/ui/tsconfig.json",
+        "lint": "biome check src test",
+        "lint:fix": "biome check --write src test",
+        "format": "biome format --write src test",
+        "watch": "concurrently -n server,webpack \"pnpm run watch:server\" \"pnpm run watch:webpack\"",
+        "watch:server": "tsc -w --declaration",
+        "watch:webpack": "webpack -w",
+        "test": "node --test --test-reporter=spec -r source-map-support/register",
+        "test:watch": "node --test --watch --test-reporter=tap -r source-map-support/register",
+        "clean": "rimraf lib/*",
+        "postinstall": "node bin/postinstall.js"
+    },
+    "directories": {
+        "doc": "doc",
+        "lib": "lib"
+    },
+    "dependencies": {
+        "@chinachu/aribts": "1.3.5-mirakurun.18",
+        "cors": "2.8.5",
+        "dotenv": "8.6.0",
+        "eventemitter3": "4.0.7",
+        "express": "4.22.2",
+        "express-openapi": "8.0.0",
+        "ip-num": "1.3.4",
+        "js-yaml": "4.1.1",
+        "jsonrpc2-ws": "1.0.0-beta23",
+        "mime": "3.0.0",
+        "morgan": "1.11.0",
+        "openapi-types": "7.2.3",
+        "promise-queue": "2.2.5",
+        "redoc": "2.5.3",
+        "redoc-try": "1.4.10",
+        "rfdc": "1.4.1",
+        "semver": "7.7.1",
+        "sift": "15.1.3",
+        "source-map-support": "0.5.21",
+        "yieldable-json": "^2.1.0"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^2.2.0",
+        "@blueprintjs/colors": "^5.1.16",
+        "@blueprintjs/core": "^5.17.6",
+        "@blueprintjs/icons": "^5.20.0",
+        "@types/cors": "^2.8.12",
+        "@types/express": "^4.17.21",
+        "@types/js-yaml": "^4.0.2",
+        "@types/luxon": "^3.6.2",
+        "@types/mime": "^3.0.4",
+        "@types/morgan": "^1.9.3",
+        "@types/node": "24",
+        "@types/promise-queue": "^2.2.0",
+        "@types/react": "^18.2.66",
+        "@types/react-dom": "^18.2.22",
+        "@types/semver": "^7.7.1",
+        "@types/ws": "^7.4.7",
+        "@types/yieldable-json": "^2.0.2",
+        "buffer": "^6.0.3",
+        "concurrently": "^10.0.3",
+        "copy-webpack-plugin": "^14.0.0",
+        "css-loader": "5.2.7",
+        "esbuild-loader": "^4.5.0",
+        "fast-deep-equal": "^3.1.3",
+        "luxon": "^3.6.1",
+        "normalize.css": "^8.0.1",
+        "process": "^0.11.10",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "react-indiana-drag-scroll": "^2.2.1",
+        "react-router-dom": "^7.16.0",
+        "rimraf": "^6.1.3",
+        "sass": "^1.89.0",
+        "sass-loader": "^16.0.5",
+        "style-loader": "^2.0.0",
+        "typescript": "7.0.1-rc",
+        "webpack": "^5.107.0",
+        "webpack-cli": "^4.9.2"
+    },
+    "overrides": {
+        "uuid": "^11.1.1"
+    },
+    "engines": {
+        "node": "^18 || ^20 || ^22 || ^24"
+    },
+    "engineStrict": true,
+    "os": [
+        "linux",
+        "darwin"
+    ],
+    "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/Mirakurun"
+    },
+    "collective": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/Mirakurun"
+    }
+}

@@ -1,0 +1,82 @@
+const { NODE_ENV } = process.env;
+const webpack = require("webpack");
+const CopyPlugin = require("copy-webpack-plugin");
+
+module.exports = {
+    mode: NODE_ENV === "production" ? "production" : "development",
+    devtool: "source-map",
+    watchOptions: {
+        ignored: /node_modules/
+    },
+    entry: {
+        index: `${__dirname}/src/ui/index.tsx`
+    },
+    output: {
+        path: `${__dirname}/lib/ui`,
+        filename: "[name].bundle.js"
+    },
+    module: {
+        rules: [
+            {
+                test: /\.tsx?$/,
+                use: [
+                    {
+                        loader: "esbuild-loader",
+                        options: {
+                            target: "es2022",
+                            tsconfig: `${__dirname}/src/ui/tsconfig.json`
+                        }
+                    }
+                ]
+            },
+            {
+                test: /\.s?[ac]ss$/,
+                use: ["style-loader", "css-loader", "sass-loader"]
+            },
+            {
+                test: /\.(png|woff|woff2|eot|ttf)$/,
+                type: "asset/resource",
+                generator: {
+                    filename: "assets/[hash][ext]"
+                }
+            },
+            {
+                test: /\.svg$/,
+                type: "asset/inline"
+            }
+        ]
+    },
+    resolve: {
+        extensions: [".ts", ".tsx", ".js", ".json"]
+    },
+    plugins: [
+        new CopyPlugin({
+            patterns: [
+                {
+                    // globby can't glob Windows-style(contain '\') path
+                    from: `${__dirname}/src/ui/**/*.{html,svg}`.replace(/\\/g, '/'),
+                    to: `${__dirname}/lib/ui`,
+                    context: `${__dirname}/src/ui`
+                }
+            ]
+        }),
+        new webpack.ProvidePlugin({
+            Buffer: ["buffer", "Buffer"]
+        }),
+        new webpack.ProvidePlugin({
+            process: "process/browser.js"
+        })
+    ],
+    optimization: {
+        splitChunks: {
+            cacheGroups: {
+                vendors: {
+                    test: /node_modules/,
+                    name: "vendors",
+                    chunks: "all",
+                    enforce: true
+                }
+            }
+        }
+    }
+};

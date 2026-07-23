@@ -1,0 +1,238 @@
+/*
+   Copyright 2021 kanreisa
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
+import type * as http from "node:http";
+import type * as net from "node:net";
+import RPCServer, { type Socket } from "jsonrpc2-ws/lib/server";
+import type * as apid from "../../api";
+import recording from "../Recording/_";
+import _ from "./_";
+import { getStatus } from "./api/status";
+import { sleep } from "./common";
+import Event from "./Event";
+import * as log from "./log";
+import { event as logEvent } from "./log";
+import { Service } from "./Service";
+import status from "./status";
+import { isPermittedHost, isPermittedIPAddress } from "./system";
+
+export interface JoinParams {
+    rooms: string[];
+}
+
+export interface NotifyParams<T> {
+    array: T[];
+}
+
+/**
+ * JSON-RPC 2.0 over WebSocket API
+ *
+ * This function is currently being tested internally by Chinachu Project.
+ * As such, the content is subject to change.
+ * There is no documentation at this time.
+ * If you want to connect to Mirakurun from your application, please use OpenAPI.
+ *
+ * @internal
+ * @experimental
+ */
+export function createRPCServer(server: http.Server): RPCServer {
+    const rpc = new RPCServer({
+        pingInterval: 1000 * 30,
+        wss: {
+            path: "/rpc",
+            perMessageDeflate: false,
+            clientTracking: false,
+            noServer: true,
+        },
+    });
+
+    server.on("upgrade", serverOnUpgrade.bind(rpc.wss));
+
+    rpc.on("connection", rpcConnection);
+
+    rpc.methods.set("join", onJoin);
+    rpc.methods.set("leave", onLeave);
+    rpc.methods.set("getStatus", getStatus);
+    rpc.methods.set("getServices", getServices);
+    rpc.methods.set("getTuners", getTuners);
+    rpc.methods.set("getJobs", getJobs);
+    rpc.methods.set("getJobSchedules", getJobSchedules);
+    rpc.methods.set("getReserves", getReserves);
+    rpc.methods.set("getRecorded", getRecorded);
+    rpc.methods.set("getEncodes", getEncodes);
+
+    return rpc;
+}
+
+const _notifierListeners = new Map<Set<RPCServer>, [(event: apid.Event) => void, (log: string) => void]>();
+export function initRPCNotifier(rpcs: Set<RPCServer>): void {
+    const eventsNMDict = {
+        program: new NotifyManager<apid.Event>("events:program", "events", rpcs),
+        service: new NotifyManager<apid.Event>("events:service", "events", rpcs),
+        tuner: new NotifyManager<apid.Event>("events:tuner", "events", rpcs),
+        job: new NotifyManager<apid.Event>("events:job", "events", rpcs),
+        job_schedule: new NotifyManager<apid.Event>("events:job_schedule", "events", rpcs),
+        reserve: new NotifyManager<apid.Event>("events:reserve", "events", rpcs),
+        rule: new NotifyManager<apid.Event>("events:rule", "events", rpcs),
+        recorded: new NotifyManager<apid.Event>("events:recorded", "events", rpcs),
+        encode: new NotifyManager<apid.Event>("events:encode", "events", rpcs),
+    };
+    function onEventListener(event: apid.Event) {
+        eventsNMDict[event.resource].notify(event);
+    }
+
+    const logsNM = new NotifyManager<string>("logs", "logs", rpcs);
+    function onLogDataListener(log: string) {
+        logsNM.notify(log);
+    }
+
+    Event.onEvent(onEventListener);
+    logEvent.on("data", onLogDataListener);
+
+    _notifierListeners.set(rpcs, [onEventListener, onLogDataListener]);
+}
+
+class NotifyManager<T> {
+    private _items = new Set<T>();
+    private _active = false;
+    constructor(
+        private _room: string,
+        private _method: string,
+        private _rpcs: Set<RPCServer>,
+    ) {}
+    async notify(item: T) {
+        this._items.add(item);
+        if (this._active) {
+            return;
+        }
+        this._active = true;
+        await sleep(8);
+        if (status.rpcCount > 0) {
+            const params: NotifyParams<T> = {
+                array: [...this._items.values()],
+            };
+            for (const rpc of this._rpcs) {
+                if (rpc.sockets.size > 0) {
+                    rpc.notifyTo(this._room, this._method, params);
+                }
+            }
+        }
+        this._items.clear();
+        this._active = false;
+    }
+}
+
+function serverOnUpgrade(this: RPCServer["wss"], req: http.IncomingMessage, socket: net.Socket, head: Buffer): void {
+    if (req.socket.remoteAddress && !isPermittedIPAddress(req.socket.remoteAddress)) {
+        socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+        socket.destroy();
+        return;
+    }
+
+    if (req.headers.origin !== undefined) {
+        if (
+            !isPermittedHost(req.headers.origin, _.config.server.hostname) &&
+            !_.config.server.allowOrigins.includes(req.headers.origin)
+        ) {
+            socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+            socket.destroy();
+            return;
+        }
+    }
+
+    this.handleUpgrade(req, socket, head, (ws) => this.emit("connection", ws, req));
+}
+
+function rpcConnection(socket: Socket, req?: http.IncomingMessage): void {
+    // connected
+    ++status.rpcCount;
+
+    const ip = req?.socket.remoteAddress || "unix";
+    const ua = `${req?.headers["user-agent"]}`;
+
+    socket.data.set("ip", ip);
+    socket.data.set("ua", ua);
+
+    socket.ws.on("error", wsError);
+    socket.on("close", socketClose);
+
+    log.info(`${ip} - RPC #${socket.id} connected - - ${ua}`);
+}
+
+function wsError(err: Error) {
+    // error
+    log.error(JSON.stringify(err, null, "  "));
+    console.error(err.stack);
+}
+
+function socketClose(this: Socket): void {
+    // disconnected
+    --status.rpcCount;
+
+    log.info(`${this.data.get("ip")} - RPC #${this.id} closed - ${this.data.get("ua")}`);
+}
+
+function onJoin(socket: Socket, params: JoinParams) {
+    for (const room of params.rooms) {
+        socket.joinTo(room);
+    }
+}
+
+function onLeave(socket: Socket, params: JoinParams) {
+    for (const room of params.rooms) {
+        socket.leaveFrom(room);
+    }
+}
+
+async function getServices() {
+    const serviceItems = [..._.service.items]; // shallow copy
+    serviceItems.sort((a, b) => a.getOrder() - b.getOrder());
+
+    const services: apid.Service[] = [];
+
+    for (const serviceItem of serviceItems) {
+        services.push({
+            ...serviceItem.export(),
+            hasLogoData: await Service.isLogoDataExists(serviceItem.networkId, serviceItem.logoId),
+        });
+    }
+
+    return services;
+}
+
+function getTuners() {
+    return _.tuner.devices;
+}
+
+function getJobs() {
+    return _.job.jobs;
+}
+
+function getJobSchedules() {
+    return _.job.schedules;
+}
+
+function getReserves() {
+    return recording.reserve?.items ?? [];
+}
+
+function getRecorded() {
+    return recording.recorded?.items ?? [];
+}
+
+function getEncodes() {
+    return recording.encode?.items ?? [];
+}
