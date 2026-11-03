@@ -113,6 +113,19 @@ export default class TSDecoder extends stream.Writable {
                 signal,
                 proc.pid,
             );
+            // kill 済みで置き換え済みのプロセスの close では _dead() を再度呼ばない (二重カウントと新プロセスの誤 kill を防ぐ)
+            if (this._process !== proc) {
+                return;
+            }
+            this._dead();
+        });
+
+        // コマンド未検出 (ENOENT) などの起動失敗。未処理だと uncaughtException になり原因がログに残らない
+        proc.once("error", (err) => {
+            log.error("TSDecoder#%d process error (command=%s): %s", this._id, this._command, err.message);
+            if (this._process !== proc) {
+                return;
+            }
             this._dead();
         });
 
@@ -158,6 +171,9 @@ export default class TSDecoder extends stream.Writable {
     }
 
     private _kill(): void {
+        // 応答待ちタイマーが残ると別経路で死んだ後に _dead() が再度呼ばれる
+        clearTimeout(this._timeout);
+
         if (this._process) {
             this._process.kill("SIGKILL");
             delete this._process;
