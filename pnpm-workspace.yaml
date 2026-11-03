@@ -5,6 +5,12 @@ allowBuilds:
   '@parcel/watcher': false
   core-js: false
   esbuild: true
+# 親パッケージの依存範囲が脆弱性の修正版を許さない推移的依存を固定する
+# uuid: jsonrpc2-ws が ^8.3.2 を要求 (v4() のみ使用のため 11 系でも互換)
+# glob: rimraf / fs-routes が ^13 を要求 (GHSA-3g3m-2fjr-6pw4 の修正は 14.0.2 以降)
+overrides:
+  uuid: ^11.1.1
+  glob: ^14.0.2
 minimumReleaseAgeExclude:
   - '@typescript/typescript-aix-ppc64@7.0.1-rc'
   - '@typescript/typescript-darwin-arm64@7.0.1-rc'
