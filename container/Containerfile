@@ -44,6 +44,7 @@ ADD src/ ./src/
 ADD config/ ./config/
 
 RUN corepack enable &&\
+    corepack use pnpm@12 &&\
     pnpm install --frozen-lockfile --prod=false && \
     pnpm run build && \
     pnpm prune --prod
