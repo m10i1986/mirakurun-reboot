@@ -31,7 +31,20 @@ module.exports = {
             },
             {
                 test: /\.s?[ac]ss$/,
-                use: ["style-loader", "css-loader", "sass-loader"]
+                use: [
+                    "style-loader",
+                    "css-loader",
+                    {
+                        loader: "sass-loader",
+                        options: {
+                            sassOptions: {
+                                // production(compressed)では非ASCII文字を含むCSSの先頭にBOMが付与され、
+                                // Blueprintの `html{box-sizing:border-box}` が無効化されるため出力しない
+                                charset: false
+                            }
+                        }
+                    }
+                ]
             },
             {
                 test: /\.(png|woff|woff2|eot|ttf)$/,
