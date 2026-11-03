@@ -42,6 +42,7 @@ ADD webpack.config.js .
 ADD bin/ ./bin/
 ADD src/ ./src/
 ADD config/ ./config/
+ADD patches/ ./patches/
 
 RUN corepack enable &&\
     corepack use pnpm@12 &&\

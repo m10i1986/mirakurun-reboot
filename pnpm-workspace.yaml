@@ -8,9 +8,12 @@ allowBuilds:
 # 親パッケージの依存範囲が脆弱性の修正版を許さない推移的依存を固定する
 # uuid: jsonrpc2-ws が ^8.3.2 を要求 (v4() のみ使用のため 11 系でも互換)
 # glob: rimraf / fs-routes が ^13 を要求 (GHSA-3g3m-2fjr-6pw4 の修正は 14.0.2 以降)
+# minimatch: redoc 経由の @redocly/openapi-core 1.x が 5.1.9 固定 (GHSA-g3hv-75wg-m249 の修正は 11.0.1 以降)
+#   11 系の CJS は require() が関数ではなくオブジェクトを返すため patches/ で { minimatch } 分割代入へ修正
 overrides:
   uuid: ^11.1.1
   glob: ^14.0.2
+  '@redocly/openapi-core>minimatch': ^11.0.4
 minimumReleaseAgeExclude:
   - '@typescript/typescript-aix-ppc64@7.0.1-rc'
   - '@typescript/typescript-darwin-arm64@7.0.1-rc'
@@ -33,3 +36,5 @@ minimumReleaseAgeExclude:
   - '@typescript/typescript-win32-arm64@7.0.1-rc'
   - '@typescript/typescript-win32-x64@7.0.1-rc'
   - typescript@7.0.1-rc
+patchedDependencies:
+  '@redocly/openapi-core@1.34.22': patches/@redocly__openapi-core@1.34.22.patch
