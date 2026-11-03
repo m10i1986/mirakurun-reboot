@@ -2,6 +2,20 @@
 
 see [Commit Logs](https://github.com/Chinachu/Mirakurun/commits/master) to check all.
 
+## Unreleased
+
+### Container / Platform
+
+- **Container**: Updated the container base image to `node:26-trixie` / `node:26-trixie-slim`. Since Node.js 25 and later no longer bundle `corepack`, it is now installed explicitly via `npm install -g corepack` in both build and runtime stages, and the runtime stage pins `pnpm@12` with `corepack use`.
+  - コンテナのベースイメージを `node:26-trixie` / `node:26-trixie-slim` に更新しました。Node.js 25 以降は `corepack` が同梱されないため、ビルド・実行の両ステージで `npm install -g corepack` により明示的に導入し、実行ステージでは `corepack use` で `pnpm@12` を固定するようにしました。
+- **Engines**: Added Node.js 26 (`^26`) to the supported `engines` range.
+  - サポートする `engines` の範囲に Node.js 26 (`^26`) を追加しました。
+
+### Test
+
+- **Test**: Replaced `test/epgstation.spec.js`, which always failed because it required the removed `lib/EPGStation/*`, with `test/recording.spec.js`. The `sanitizeFilename()` / `buildRecordedFilename()` cases now target `lib/Recording/util`, and the `matchesRule()` cases were dropped along with the removed rule module.
+  - 削除済みの `lib/EPGStation/*` を参照して常に失敗していた `test/epgstation.spec.js` を `test/recording.spec.js` に置き換えました。`sanitizeFilename()` / `buildRecordedFilename()` のケースは `lib/Recording/util` を対象とし、削除済みのルールモジュールに対応する `matchesRule()` のケースは除外しました。
+
 ## 5.1.2 (2026-06-20)
 
 ### Recording
