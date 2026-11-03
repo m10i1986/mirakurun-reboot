@@ -51,7 +51,9 @@ PodmanArgs=--log-opt max-size=10m
 # environment
 Environment=TZ=Asia/Tokyo
 Environment=DISABLE_PCSCD=0
-Environment=DISABLE_B25_TEST=0
+# recpt1 内蔵の B25 デコード (--b25) を使うため arib-b25-stream-test の自動導入は無効化
+# (実行用イメージには make / gcc が無く preinstall が失敗する)
+Environment=DISABLE_B25_TEST=1
 Environment=DOCKER_NETWORK=host
 
 # volumes
