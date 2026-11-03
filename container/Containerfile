@@ -41,6 +41,7 @@ ADD tsconfig.json .
 ADD webpack.config.js .
 ADD bin/ ./bin/
 ADD src/ ./src/
+ADD config/ ./config/
 
 RUN corepack enable &&\
     pnpm install --frozen-lockfile --prod=false && \
@@ -49,6 +50,8 @@ RUN corepack enable &&\
 
 FROM ${ARCH}node:24-trixie-slim
 WORKDIR /app
+# -it 起動時の corepack ダウンロード確認プロンプトを無効化 (setup で pnpm 取得が中断されるため)
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable
 RUN apt-get update && \
     apt-get upgrade -y && \
